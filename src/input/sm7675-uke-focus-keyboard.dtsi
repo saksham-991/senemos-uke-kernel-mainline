@@ -3,9 +3,20 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 
 / {
+	/*
+	 * The OEM node uses the downstream binding (compatible "qcom,i2c-geni",
+	 * clock named "se-clk") and only a transmit DMA specifier. The mainline
+	 * geni-i2c driver matches "qcom,geni-i2c" and looks up a clock named
+	 * "se", so the controller never probes and no i2c client is created for
+	 * the keyboard. Normalize it the same way the other QUP buses are.
+	 */
 	fragment@250 {
 		target-path = "/soc/qcom,qupv3_0_geni_se@ac0000/i2c@a8c000";
 		__overlay__ {
+			compatible = "qcom,geni-i2c";
+			clock-names = "se";
+			clock-frequency = <400000>;
+			dmas = <&gpi_dma0 0 3 3>, <&gpi_dma0 1 3 3>;
 			status = "okay";
 		};
 	};
