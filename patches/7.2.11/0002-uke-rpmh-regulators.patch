@@ -2432,13 +2432,15 @@ index 000000000000..9b68d9a26ca1
 +		return rc;
 +	}
 +
-+	/* Limit this data-only experiment to the six required supply resources. */
++	/* Limit this data-only experiment to the eight required supply resources. */
 +	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
 +	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob2") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob4") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob7") &&
-+	    strcmp(aggr_vreg->resource_name, "ldob17"))
++	    strcmp(aggr_vreg->resource_name, "ldob17") &&
++	    strcmp(aggr_vreg->resource_name, "ldob22") &&
++	    strcmp(aggr_vreg->resource_name, "ldob23"))
 +		return -ENODEV;
 +
 +	aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
