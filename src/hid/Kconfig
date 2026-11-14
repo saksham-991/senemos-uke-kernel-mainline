@@ -1,0 +1,7 @@
+config HID_NANOSIC_WN8030
+	tristate "Nanosic WN8030 keyboard MCU"
+	depends on OF && PM && HIDRAW && I2C && GPIOLIB
+	select REGMAP_I2C
+	help
+	  Say Y here if you want to enable support for the Nanosic WN8030 MCU
+	  used as keyboard controller in devices such as Xiaomi Focus Keyboard.

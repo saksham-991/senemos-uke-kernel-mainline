@@ -148,6 +148,7 @@ bash "$profile/tests/dp-mst-payload-contract.sh" "$kernel/drivers/gpu/drm/msm/dp
 bash "$profile/tests/dp-mst-control-contract.sh" "$kernel/drivers/gpu/drm/msm/dp/dp_ctrl.c"
 bash "$profile/tests/dp-lane-limit-contract.sh" "$kernel"
 bash "$profile/src/input/prepare-source.sh" "$kernel"
+bash "$profile/src/hid/prepare-source.sh" "$kernel"
 bash "$profile/src/display/prepare-native-abl-source.sh" "$kernel" "$output" auto
 if [[ $(cat "$profile/audio-profile") =~ ^(hdmi-only|speakers|microphones)$ ]]; then
     git -C "$kernel" apply --check "$profile/patches/boot/0009-uke-displayport-dma-scope.patch"

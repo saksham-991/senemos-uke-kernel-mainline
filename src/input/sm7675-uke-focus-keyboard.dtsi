@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: GPL-2.0-only
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	fragment@250 {
+		target-path = "/soc/qcom,qupv3_0_geni_se@ac0000/i2c@a8c000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@251 {
+		target-path = "/soc/qcom,qupv3_0_geni_se@ac0000/i2c@a8c000/nanosic@4c";
+		__overlay__ {
+			status = "okay";
+			compatible = "nanosic,wn8030", "nanosic,wn8030-sheng", "nanosic,803";
+			reset-gpios = <&tlmm 127 GPIO_ACTIVE_LOW>;
+			sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
+			status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <116 IRQ_TYPE_EDGE_RISING>;
+			vdd-supply = <&pmxr2230_l22>;
+			vddio-supply = <&pmxr2230_l22>;
+			dvdd-supply = <&pmxr2230_l23>;
+			firmware-name = "nanosic/MCU_Upgrade.bin";
+		};
+	};
+};
