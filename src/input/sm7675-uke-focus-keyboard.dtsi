@@ -20,9 +20,9 @@
 			status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
 			interrupt-parent = <&tlmm>;
 			interrupts = <116 IRQ_TYPE_EDGE_RISING>;
-			vdd-supply = <&pmxr2230_l22>;
-			vddio-supply = <&pmxr2230_l22>;
-			dvdd-supply = <&pmxr2230_l23>;
+			vdd-supply = <&pmxr2230_l23>;
+			vddio-supply = <&pmxr2230_l23>;
+			dvdd-supply = <&pmxr2230_l22>;
 			firmware-name = "nanosic/MCU_Upgrade.bin";
 		};
 	};
