@@ -38,7 +38,6 @@
 				sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
 				vdd-supply = <&L22B>;
 				dvdd-supply = <&L23B>;
-				vddio-supply = <&L23B>;
 				nanosic,vdd-name = "vdd";
 				nanosic,dvdd-name = "dvdd";
 				firmware-name = "nanosic/MCU_Upgrade.bin";
