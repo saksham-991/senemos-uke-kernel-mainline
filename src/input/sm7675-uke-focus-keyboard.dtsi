@@ -4,14 +4,14 @@
 
 / {
 	/*
-	 * The OEM node uses the downstream binding (compatible "qcom,i2c-geni",
+	 * The OEM node uses downstream binding (compatible "qcom,i2c-geni",
 	 * clock named "se-clk") and only a transmit DMA specifier. The mainline
 	 * geni-i2c driver matches "qcom,geni-i2c" and looks up a clock named
 	 * "se", so the controller never probes and no i2c client is created for
 	 * the keyboard. Normalize it the same way the other QUP buses are.
 	 */
 	fragment@250 {
-		target-path = "/soc/qcom,qupv3_0_geni_se@ac0000/i2c@a8c000";
+		target = <&qupv3_se3_i2c>;
 		__overlay__ {
 			compatible = "qcom,geni-i2c";
 			clock-names = "se";
@@ -22,19 +22,41 @@
 	};
 
 	fragment@251 {
-		target-path = "/soc/qcom,qupv3_0_geni_se@ac0000/i2c@a8c000/nanosic@4c";
+		target = <&qupv3_se3_i2c>;
 		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "okay";
-			compatible = "nanosic,wn8030", "nanosic,wn8030-sheng", "nanosic,803";
-			reset-gpios = <&tlmm 127 GPIO_ACTIVE_LOW>;
-			sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
-			status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
-			interrupt-parent = <&tlmm>;
-			interrupts = <116 IRQ_TYPE_EDGE_RISING>;
-			vdd-supply = <&pmxr2230_l23>;
-			vddio-supply = <&pmxr2230_l23>;
-			dvdd-supply = <&pmxr2230_l22>;
-			firmware-name = "nanosic/MCU_Upgrade.bin";
+
+			nanosic@4c {
+				compatible = "nanosic,wn8030", "nanosic,803";
+				reg = <0x4c>;
+				interrupt-parent = <&tlmm>;
+				interrupts = <116 IRQ_TYPE_EDGE_RISING>;
+				reset-gpios = <&tlmm 127 GPIO_ACTIVE_LOW>;
+				status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
+				sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
+				vdd-supply = <&L22B>;
+				dvdd-supply = <&L23B>;
+				vddio-supply = <&L23B>;
+				nanosic,vdd-name = "vdd";
+				nanosic,dvdd-name = "dvdd";
+				firmware-name = "nanosic/MCU_Upgrade.bin";
+				touchpad,edge-area-left-min = <0x00>;
+				touchpad,edge-area-left-max = <0x140>;
+				touchpad,edge-area-right-min = <0xb3f>;
+				touchpad,edge-area-right-max = <0xc7f>;
+				touchpad,edge-area-top-min = <0x00>;
+				touchpad,edge-area-top-max = <0x1ab>;
+				touchpad,edge-area-bottom-min = <0x6ac>;
+				touchpad,edge-area-bottom-max = <0x857>;
+				touchpad,shield-frame-count-limit = <0x8c>;
+				touchpad,one-swipe-dis-limit = <0x9c40>;
+				touchpad,two-swipe-dis-limit = <0x9c4>;
+				touchpad,two-pinch-dis-limit = <0x9c4>;
+				touchpad,three-swipe-dis-limit = <0x2710>;
+				touchpad,two-fingers-gesture-dis = <0xe1f04>;
+			};
 		};
 	};
 };
