@@ -29,17 +29,21 @@
 			status = "okay";
 
 			nanosic@4c {
-				compatible = "nanosic,wn8030", "nanosic,803";
+				compatible = "nanosic,wn8030-uke", "nanosic,wn8030", "nanosic,803";
 				reg = <0x4c>;
 				interrupt-parent = <&tlmm>;
 				interrupts = <116 IRQ_TYPE_EDGE_RISING>;
 				reset-gpios = <&tlmm 127 GPIO_ACTIVE_LOW>;
 				status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
 				sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
-				vdd-supply = <&L22B>;
-				dvdd-supply = <&L23B>;
-				nanosic,vdd-name = "vdd";
-				nanosic,dvdd-name = "dvdd";
+				/*
+				 * OEM names these vdd (L22B, 3.3 V) and dvdd
+				 * (L23B, 1.8 V).  The standard binding names the
+				 * I/O rail vddio and the MCU rail dvdd, and the
+				 * driver enables vddio first.
+				 */
+				vddio-supply = <&L23B>;
+				dvdd-supply = <&L22B>;
 				firmware-name = "nanosic/MCU_Upgrade.bin";
 				touchpad,edge-area-left-min = <0x00>;
 				touchpad,edge-area-left-max = <0x140>;
