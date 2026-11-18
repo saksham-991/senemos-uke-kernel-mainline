@@ -242,8 +242,8 @@ import pathlib, sys
 path = pathlib.Path(sys.argv[1]) / "drivers/regulator/qcom-rpmh-regulator-uke.c"
 text = path.read_text()
 if "ldob22" not in text:
-    needle = '\t    strcmp(aggr_vreg->resource_name, "ldob17"))'
-    replacement = ('\t    strcmp(aggr_vreg->resource_name, "ldob17") &&\n'
+    needle = '\t    strcmp(aggr_vreg->resource_name, "ldod3"))'
+    replacement = ('\t    strcmp(aggr_vreg->resource_name, "ldod3") &&\n'
                    '\t    strcmp(aggr_vreg->resource_name, "ldob22") &&\n'
                    '\t    strcmp(aggr_vreg->resource_name, "ldob23"))')
     if needle not in text:
