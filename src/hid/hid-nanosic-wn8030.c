@@ -1203,7 +1203,8 @@ static irqreturn_t nanosic_wn8030_handler(int irq, void *data)
 	if (READ_ONCE(nanosic->suspended)) {
 		WRITE_ONCE(nanosic->suspended, false);
 		schedule_work(&nanosic->input_state_work);
-		return IRQ_HANDLED;
+		if (!nanosic->variant->packed_reports)
+			return IRQ_HANDLED;
 	}
 
 	ret = regmap_bulk_read(nanosic->regmap, 0x4c, buf, sizeof(buf));
@@ -2009,6 +2010,7 @@ static void nanosic_wn8030_remove(struct i2c_client *client)
 static int nanosic_wn8030_resume(struct device *dev)
 {
 	struct nanosic_wn8030 *nanosic = dev_get_drvdata(dev);
+	int ret;
 
 	enable_irq(nanosic->client->irq);
 
@@ -2022,11 +2024,15 @@ static int nanosic_wn8030_resume(struct device *dev)
 		gpiod_set_value_cansleep(nanosic->reset_gpio, 0);
 		msleep(nanosic->variant->boot_ms);
 		WRITE_ONCE(nanosic->suspended, false);
-		return nanosic_wn8030_load_fw(nanosic);
+		ret = nanosic_wn8030_load_fw(nanosic);
+		if (ret)
+			return ret;
 	}
 
 	/* Wake up keyboard after MCU exits sleep */
 	nanosic_wn8030_set_kb_power(nanosic, true);
+	if (READ_ONCE(nanosic->keyboard_attached))
+		schedule_delayed_work(&nanosic->wake_worker, msecs_to_jiffies(12000));
 	schedule_work(&nanosic->input_state_work);
 
 	return 0;
