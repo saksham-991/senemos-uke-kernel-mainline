@@ -2,7 +2,6 @@
 /* Both O82 suppliers share these OEM timings; ON packets remain supplier-specific. */
 #include "sm7675-uke-native-display.dtso"
 #include "../input/sm7675-uke-thp.dtsi"
-#include "../input/sm7675-uke-focus-keyboard.dtsi"
 
 &uke_panel {
 	/delete-property/ xiaomi,initial-60hz-only;
