@@ -242,12 +242,27 @@ import pathlib, sys
 path = pathlib.Path(sys.argv[1]) / "drivers/regulator/qcom-rpmh-regulator-uke.c"
 text = path.read_text()
 if "ldob22" not in text:
-    needle = '\t    strcmp(aggr_vreg->resource_name, "ldod3"))'
-    replacement = ('\t    strcmp(aggr_vreg->resource_name, "ldod3") &&\n'
-                   '\t    strcmp(aggr_vreg->resource_name, "ldob22") &&\n'
-                   '\t    strcmp(aggr_vreg->resource_name, "ldob23"))')
-    if needle not in text:
+    start = text.index('if (strcmp(aggr_vreg->resource_name, "cx.lvl")')
+    end = text.index("return -ENODEV;", start)
+    block = text[start:end]
+    lines = block.splitlines(keepends=True)
+    changed = False
+    for i in range(len(lines) - 1, -1, -1):
+        line = lines[i]
+        if "strcmp(aggr_vreg->resource_name" not in line or not line.rstrip().endswith("))"):
+            continue
+        indent = line[:len(line) - len(line.lstrip())]
+        lines[i] = line.replace(
+            "))",
+            ") &&\n" + indent + 'strcmp(aggr_vreg->resource_name, "ldob22") &&\n'
+            + indent + 'strcmp(aggr_vreg->resource_name, "ldob23"))',
+            1,
+        )
+        changed = True
+        break
+    if not changed:
         raise SystemExit("WN8030 rail insertion point missing")
-    path.write_text(text.replace(needle, replacement, 1))
+    path.write_text(text[:start] + "".join(lines) + text[end:])
 print("WN8030 rails admitted")
+
 PY
