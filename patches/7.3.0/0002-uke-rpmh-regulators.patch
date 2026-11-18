@@ -438,7 +438,7 @@ new file mode 100644
 index 000000000000..9b68d9a26ca1
 --- /dev/null
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -0,0 +1,2124 @@
+@@ -0,0 +1,2126 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/* Copyright (c) 2016-2021, The Linux Foundation. All rights reserved. */
 +/* Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved. */
