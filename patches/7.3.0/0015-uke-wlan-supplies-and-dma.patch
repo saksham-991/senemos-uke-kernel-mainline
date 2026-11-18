@@ -6,7 +6,6 @@ then admit OEM smpb1/smpb3 and the exact WLAN SMR ID/mask. Require all
 three Uke RF supplies before DSP boot; unwind failed starts and release
 votes after shutdown. Other ath11k AHB boards stay unchanged.
 
-diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c b/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 --- a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 +++ b/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 @@ -815,7 +815,7 @@
@@ -35,27 +34,21 @@ diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c b/drivers/iommu/arm/arm-
  				return dev_err_probe(dev, -EOPNOTSUPP,
  						     "boot stream needs an ACTLR override\n");
  	}
-diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qcom-rpmh-regulator-uke.c
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -1991,18 +1991,25 @@
+@@ -1991,13 +1991,20 @@
  		return rc;
  	}
  
--	/* Limit this data-only experiment to the required supply resources. */
-+	/* OEM Uke supplies required by CPU, USB, UFS, WLAN and Focus Keyboard. */
+-	/* Limit this data-only experiment to the six required supply resources. */
++	/* OEM Uke supplies required by CPU, USB, UFS and WCN6750. */
  	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
- 	    strcmp(aggr_vreg->resource_name, "lcx.lvl") &&
- 	    strcmp(aggr_vreg->resource_name, "lmx.lvl") &&
- 	    strcmp(aggr_vreg->resource_name, "mxc.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "ldob2") &&
  	    strcmp(aggr_vreg->resource_name, "ldob4") &&
  	    strcmp(aggr_vreg->resource_name, "ldob7") &&
- 	    strcmp(aggr_vreg->resource_name, "ldob17") &&
- 	    strcmp(aggr_vreg->resource_name, "ldob22") &&
--	    strcmp(aggr_vreg->resource_name, "ldob23"))
-+	    strcmp(aggr_vreg->resource_name, "ldob23") &&
+-	    strcmp(aggr_vreg->resource_name, "ldob17"))
++	    strcmp(aggr_vreg->resource_name, "ldob17") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb2") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb1") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb3") &&
@@ -66,7 +59,6 @@ diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qco
  		return -ENODEV;
  
  	aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
-diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/ath11k/ahb.c
 --- a/drivers/net/wireless/ath/ath11k/ahb.c
 +++ b/drivers/net/wireless/ath/ath11k/ahb.c
 @@ -401,14 +401,60 @@
@@ -150,7 +142,6 @@ diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/at
  	ret = ath11k_pcic_register_pci_ops(ab, pci_ops);
  	if (ret) {
  		ath11k_err(ab, "failed to register PCI ops: %d\n", ret);
-diff --git a/drivers/net/wireless/ath/ath11k/ahb.h b/drivers/net/wireless/ath/ath11k/ahb.h
 --- a/drivers/net/wireless/ath/ath11k/ahb.h
 +++ b/drivers/net/wireless/ath/ath11k/ahb.h
 @@ -7,6 +7,7 @@
