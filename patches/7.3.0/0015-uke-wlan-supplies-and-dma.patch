@@ -36,7 +36,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	}
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -1991,13 +1991,20 @@
+@@ -1991,15 +1991,22 @@
  		return rc;
  	}
  
@@ -47,8 +47,10 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	    strcmp(aggr_vreg->resource_name, "ldob2") &&
  	    strcmp(aggr_vreg->resource_name, "ldob4") &&
  	    strcmp(aggr_vreg->resource_name, "ldob7") &&
--	    strcmp(aggr_vreg->resource_name, "ldob17"))
-+	    strcmp(aggr_vreg->resource_name, "ldob17") &&
+ 	    strcmp(aggr_vreg->resource_name, "ldob17") &&
+-	    strcmp(aggr_vreg->resource_name, "ldob23"))
++	    strcmp(aggr_vreg->resource_name, "ldob22") &&
++	    strcmp(aggr_vreg->resource_name, "ldob23") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb2") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb1") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb3") &&
