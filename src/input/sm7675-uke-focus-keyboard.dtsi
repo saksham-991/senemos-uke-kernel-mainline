@@ -3,6 +3,22 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 
 / {
+	keyboard_vddio: regulator-keyboard-vddio {
+		compatible = "regulator-fixed";
+		regulator-name = "keyboard-vddio";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	keyboard_dvdd: regulator-keyboard-dvdd {
+		compatible = "regulator-fixed";
+		regulator-name = "keyboard-dvdd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
 	/*
 	 * The OEM node uses downstream binding (compatible "qcom,i2c-geni",
 	 * clock named "se-clk") and only a transmit DMA specifier. The mainline
@@ -42,8 +58,8 @@
 				 * I/O rail vddio and the MCU rail dvdd, and the
 				 * driver enables vddio first.
 				 */
-				vddio-supply = <&L23B>;
-				dvdd-supply = <&L22B>;
+				vddio-supply = <&keyboard_vddio>;
+				dvdd-supply = <&keyboard_dvdd>;
 				firmware-name = "nanosic/MCU_Upgrade.bin";
 				touchpad,edge-area-left-min = <0x00>;
 				touchpad,edge-area-left-max = <0x140>;

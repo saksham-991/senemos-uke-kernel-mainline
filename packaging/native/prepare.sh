@@ -234,35 +234,3 @@ if [[ $(jq -er .version "$kernel/senemos-adaptation/source-lock.json") == 7.3.1 
         "$profile/src/display/dpu_o82_platform.c" >> "$output/abl-source-SHA256SUMS"
 fi
 
-# WN8030 keyboard rails. Keep the hardware-tested RPMH patch set intact and
-# add only the two rails after every kernel patch and source overlay has been
-# applied, so UFS keeps its original probe ordering.
-python3 - "$kernel" <<'PY'
-import pathlib, sys
-path = pathlib.Path(sys.argv[1]) / "drivers/regulator/qcom-rpmh-regulator-uke.c"
-text = path.read_text()
-if "ldob22" not in text:
-    start = text.index('if (strcmp(aggr_vreg->resource_name, "cx.lvl")')
-    end = text.index("return -ENODEV;", start)
-    block = text[start:end]
-    lines = block.splitlines(keepends=True)
-    changed = False
-    for i in range(len(lines) - 1, -1, -1):
-        line = lines[i]
-        if "strcmp(aggr_vreg->resource_name" not in line or not line.rstrip().endswith("))"):
-            continue
-        indent = line[:len(line) - len(line.lstrip())]
-        lines[i] = line.replace(
-            "))",
-            ") &&\n" + indent + 'strcmp(aggr_vreg->resource_name, "ldob22") &&\n'
-            + indent + 'strcmp(aggr_vreg->resource_name, "ldob23"))',
-            1,
-        )
-        changed = True
-        break
-    if not changed:
-        raise SystemExit("WN8030 rail insertion point missing")
-    path.write_text(text[:start] + "".join(lines) + text[end:])
-print("WN8030 rails admitted")
-
-PY
