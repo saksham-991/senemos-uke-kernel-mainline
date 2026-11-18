@@ -7,7 +7,7 @@
 Name: senemos-uke-linux-kernel-mainline
 Version: 7.3.1
 %if "%{version}" == "7.3.1"
-%global senemos_build_release 106
+%global senemos_build_release 107
 %else
 %global senemos_build_release 1
 %endif
@@ -481,6 +481,12 @@ cp -a boot-recipe/src/boot/licenses/. %{buildroot}/usr/share/licenses/%{name}-bo
 /usr/lib/senemos/default-boot.img
 
 %changelog
+* Wed Nov 18 2026 multimode_Liu <dustymind@foxmail.com> - 7.3.1-107
+- Apply the Focus Keyboard overlay on its own, after the USB and display ones.
+- Re-anchor the native ABL patch on the four-overlay transform call.
+- Take the upstream Nanosic reset pulse, 50 ms boot and 20 ms wake delays.
+- Re-arm the 12 s keyboard keepalive after resume.
+
 * Sun Nov 01 2026 MCC45TR <75160848+MCC45TR@users.noreply.github.com> - 7.3.1-1041
 - Combine verified release1020 USB/power inputs with default-off O82 CABC.
 - Check paired panel lifecycle and ABM faults before the complete kernel build.
