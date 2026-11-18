@@ -36,7 +36,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	}
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -1991,15 +1991,22 @@
+@@ -1991,14 +1991,22 @@
  		return rc;
  	}
  
