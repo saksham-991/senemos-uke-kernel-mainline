@@ -66,6 +66,10 @@
       "sha256": "99f958bd34a7c4def62323e58bb6e30d12be82097f3447b7f034c0b6d5e21742"
     },
     {
+      "path": "patches/7.3.0/0024-uke-adsp-gpu-arc-suppliers.patch",
+      "sha256": "52272d96a6e364cee9d2665f24ba52cb9dac72444b9095e2c980692c6c523490"
+    },
+    {
       "path": "patches/7.3.0/0015-uke-wlan-supplies-and-dma.patch",
       "sha256": "07194f96f8c4dda1e8cc7d503451561aee58118f72ad0ccd53aacdb0a21a822b"
     },
@@ -100,10 +104,6 @@
     {
       "path": "patches/7.3.0/0023-uke-qup1-backlight-bus.patch",
       "sha256": "6ce2231e5a2ed8857e739778c3fdd8db1bfc20232c8ef8ea7f46b279b1aced9c"
-    },
-    {
-      "path": "patches/7.3.0/0024-uke-adsp-gpu-arc-suppliers.patch",
-      "sha256": "52272d96a6e364cee9d2665f24ba52cb9dac72444b9095e2c980692c6c523490"
     },
     {
       "path": "patches/7.3.0/0025-uke-paired-normal-backlight.patch",
