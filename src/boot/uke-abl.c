@@ -517,10 +517,11 @@ static int UKE_INIT uke_scope_qup_buses(void *fdt)
 		"/soc/qcom,qupv3_1_geni_se@8c0000/i2c@890000",
 		"/soc/qcom,qupv3_0_geni_se@ac0000",
 	};
-	static const char * const admitted[][4] = {
+	static const char * const admitted[][5] = {
 		{ "i2c@890000", NULL, NULL, NULL },
 		{ "ktz8866@11", "ntag@57", NULL, NULL },
-		{ "i2c@a80000", "spi@a90000", "spi@a84000", NULL },
+		{ "i2c@a80000", "spi@a90000", "spi@a84000",
+		  "i2c@a8c000", NULL },
 	};
 	int i, j, parent, child, ret;
 
