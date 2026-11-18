@@ -40,7 +40,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  		return rc;
  	}
  
--	/* Limit this data-only experiment to the six required supply resources. */
+-	/* Limit this data-only experiment to the eight required supply resources. */
 +	/* OEM Uke supplies required by CPU, USB, UFS and WCN6750. */
  	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
