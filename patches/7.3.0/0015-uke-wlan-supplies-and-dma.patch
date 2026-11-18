@@ -61,6 +61,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  		return -ENODEV;
  
  	aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
+diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/ath11k/ahb.c
 --- a/drivers/net/wireless/ath/ath11k/ahb.c
 +++ b/drivers/net/wireless/ath/ath11k/ahb.c
 @@ -401,14 +401,60 @@
