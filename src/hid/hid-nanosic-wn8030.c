@@ -2074,7 +2074,10 @@ static const struct nanosic_wn8030_variant nanosic_wn8030_uke = {
 	.consumer_len = 3,
 	.touchpad_len = 21,
 	.caps_led_mask = 0xff,
-	.boot_ms = 20,
+	/* The OEM cover may already be powered when we probe; pulse reset. */
+	.reset_ms = 2,
+	.boot_ms = 50,
+	.wake_ms = 20,
 };
 
 /*
