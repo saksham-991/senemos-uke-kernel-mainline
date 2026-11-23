@@ -11,11 +11,7 @@ for path in "${overlays[@]}"; do
     git -C "$kernel" apply --check "$here/$path"
     git -C "$kernel" apply "$here/$path"
 done
-config=$kernel/.config
-for sensor in OV08D10 OV13B10; do
-    [[ $(grep -Fxc "# CONFIG_VIDEO_$sensor is not set" "$config") == 1 ]]
-    sed -i "s/^# CONFIG_VIDEO_$sensor is not set$/CONFIG_VIDEO_$sensor=m/" "$config"
-done
+# Kernel config (CONFIG_VIDEO_OV08D10/OV13B10) is set in packaging/native/native.config
 # Verify DT binding installed
 test -s "$kernel/Documentation/devicetree/bindings/media/i2c/ovti,ov13b10.yaml"
 printf 'Native camera sensor modules enabled; DT activation and firmware remain separate\n'
