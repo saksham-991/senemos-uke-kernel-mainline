@@ -447,6 +447,34 @@ int nvt_uke_coordinate_mode(const struct nvt_uke_io *io, bool enabled)
 	return ret ? ret : nvt_uke_guard(io);
 }
 
+int nvt_uke_pen_scan(const struct nvt_uke_io *io, bool enabled)
+{
+	u8 request[] = { 0x7b, enabled ? 2 : 0 };
+	u8 ack = 0;
+	unsigned int attempt;
+	int ret;
+
+	ret = nvt_uke_setting_ack(io, 0x04, enabled);
+	if (ret)
+		return ret;
+
+	for (attempt = 0; attempt < 10; attempt++) {
+		if (ack != request[0]) {
+			ret = nvt_uke_write(io, 0x11c450, request,
+					    sizeof(request), false);
+			if (ret)
+				return ret;
+		}
+		io->delay_ms(io->context, 10);
+		ret = nvt_uke_read(io, 0x11c450, &ack, 1, false);
+		if (ret)
+			return ret;
+		if (!ack)
+			return nvt_uke_guard(io);
+	}
+	return -ETIMEDOUT;
+}
+
 int nvt_uke_gesture_enter(const struct nvt_uke_io *io)
 {
 	const u8 pen_off[] = { 0x7b, 0 };

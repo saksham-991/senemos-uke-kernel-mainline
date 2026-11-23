@@ -493,7 +493,7 @@
     },
     {
       "path": "src/boot/uke-abl.c",
-      "sha256": "e7a5c76d4100bea9600d14c56d2c010495e177cde9751fbe6849640c32b165a4"
+      "sha256": "6af8bc60aa4602a5820181d2b47b8e9daebbe0ce0d29b0fba277216e49e94ec1"
     },
     {
       "path": "src/boot/uke-bwmon.h",
@@ -581,15 +581,15 @@
     },
     {
       "path": "src/input/nt36532-uke-protocol.c",
-      "sha256": "f81f42c2622a6eb671fd7ca11fbb0ce700b6f5a7589a43cb379b5baa7cdfb1ca"
+      "sha256": "34118d49c20bf06e5a29eb4a05d684284fb43aefa2094fb51ee157f4cc647ed4"
     },
     {
       "path": "src/input/nt36532-uke-protocol.h",
-      "sha256": "8c0aeddb7feaa9191b0e2409e43a05772ec320140ecd7c5ff95400281e982de5"
+      "sha256": "c1ce02546e50f36324225fdee4d2ffcc236338d01c03d5ae347c03a956f37e87"
     },
     {
       "path": "src/input/nt36532-uke-spi.c",
-      "sha256": "f4be3266eb672c1e33f3d6358946db30839c6f5031bf1efbeda66c5496fcaa50"
+      "sha256": "733b5c9ddbd95e47da3b8bcf535c55368c8dc524e9376307a80d24b25e02b1d4"
     },
     {
       "path": "src/input/prepare-source.sh",
@@ -977,11 +977,11 @@
     },
     {
       "path": "tests/touch-transport-contract.sh",
-      "sha256": "fef82d0f4897938384686636b5afe447a88fffb2de3cf5f6022cf9112afc6466"
+      "sha256": "988fde9a3106f9002d6922bc092171a7ce54ac1463d9ade47baf8c88b9bc9f7b"
     },
     {
       "path": "tests/touch-transport.c",
-      "sha256": "df4a8f0ebc02e3efff79146f4b60b55756cfe1ef627934dfbc7f94fb12b4611b"
+      "sha256": "6b63e743bd8c3ed8f6c13f2889a990689db163afcf149c7e5b63ee6b9bfef2b4"
     },
     {
       "path": "tests/uke-build-scope-contract.sh",

@@ -43,6 +43,7 @@ struct nvt_uke_touch {
     mutex_t ctrl, io_lock, irq_lock, state_lock;
     struct work_struct boot_work;
     struct work_struct charger_work;
+    struct work_struct pen_work;
     struct delayed_work poll_work;
     struct nvt_uke_matrix matrix;
     unsigned long last_irq, last_valid;
@@ -57,6 +58,7 @@ struct nvt_uke_touch {
     bool firmware_ready;
     const struct firmware *firmware;
     bool charger_known, charger_online;
+    bool pen_scanning;
     unsigned int watchdog;
     u64 io_errors, recovery_attempts;
     unsigned int recovery_budget;
@@ -180,6 +182,13 @@ static void nvt_publish_contacts(struct nvt_uke_touch *t, int result) {
     assert(!result && !nvt_ready(t) && t->booted);
     mock.published++;
 }
+#ifdef NVT_HAS_PEN
+static void nvt_update_pen(struct nvt_uke_touch *t) { assert(t->booted && !nvt_ready(t)); }
+static bool nvt_send_pen_frame(struct nvt_uke_touch *t) { assert(t->booted && !nvt_ready(t)); return false; }
+enum { quiesce_workers = 3 };
+#else
+enum { quiesce_workers = 2 };
+#endif
 __attribute__((format(printf, 2, 3)))
 static void dev_warn_ratelimited(struct device *dev, const char *format, ...) {
     assert(dev && format);
@@ -207,6 +216,7 @@ static void reset(void) {
     touch.io_errors = touch.recovery_attempts = 0; touch.recovery_budget = 1;
     touch.boot_work.pending = 0;
     touch.charger_work.pending = 0;
+    touch.pen_work.pending = 0;
     touch.poll_work.pending = 0;touch.matrix.samples = 32;
     mock.calls = mock.fail = mock.short_at = mock.change_epoch = 0;
     mock.enables = mock.disables = mock.cancels = mock.queues = 0;
@@ -312,6 +322,7 @@ int main(void) {
     assert(pthread_mutex_init(&touch.state_lock, NULL) == 0);
     touch.spi = &spi; touch.tx = tx; touch.rx = rx; touch.frame = frame; touch.boot_work.touch = &touch;
     touch.charger_work.touch = &touch; touch.io.context = &touch;
+    touch.pen_work.touch = &touch;
     recovery_contract();
     reset();
     u8 data[NVT_UKE_FRAME_SIZE];
@@ -357,11 +368,11 @@ int main(void) {
     assert(mock.enables == 1);
     u64 state = 3;
     assert(nvt_panel_changed(&touch.panel_notifier, 0, &state) == NOTIFY_OK);
-    assert(mock.disables == 1 && mock.cancels == 2 && mock.queues == 1);
+    assert(mock.disables == 1 && mock.cancels == quiesce_workers && mock.queues == 1);
     assert(!touch.booted && !touch.idle_reset && !touch.watchdog);
     nvt_irq_set(&touch, true); assert(mock.enables == 1);
     assert(nvt_panel_changed(&touch.panel_notifier, 0, &state) == NOTIFY_OK);
-    assert(mock.cancels == 2 && mock.queues == 1);
+    assert(mock.cancels == quiesce_workers && mock.queues == 1);
     struct device dev = { .touch = &touch };
     assert(nvt_suspend(&dev) == 0 && touch.suspended);
     assert(nvt_resume(&dev) == 0 && !touch.suspended && mock.queues == 2);

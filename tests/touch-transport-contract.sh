@@ -11,10 +11,14 @@ awk '
  copying && /^}/ { copying=0 }
 ' "$source_file" > "$stage/production.h"
 [[ $(grep -c '^static ' "$stage/production.h") == 16 ]]
+pen_flags=()
+if grep -q 'cancel_work_sync(&t->pen_work)' "$stage/production.h"; then
+    pen_flags=(-DNVT_HAS_PEN)
+fi
 sanitize=()
 [[ -z ${UKE_TOUCH_SANITIZE:-} ]] || sanitize=(-fsanitize=address,undefined -fno-omit-frame-pointer)
 "${CC:-cc}" -std=gnu11 -O2 -g -Wall -Wextra -Werror -Wno-unused-parameter \
-    "${sanitize[@]}" -pthread -I "$stage" "$root/tests/touch-transport.c" -o "$stage/check"
+    "${sanitize[@]}" "${pen_flags[@]}" -pthread -I "$stage" "$root/tests/touch-transport.c" -o "$stage/check"
 timeout 30s "$stage/check"
 awk '
  /^static void o82_touch_state\(/ || /^int uke_o82_touch_register\(/ || /^void uke_o82_touch_unregister\(/ { copying=1 }

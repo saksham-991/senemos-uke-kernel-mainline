@@ -142,7 +142,7 @@ static int pmic_glink_send(struct pmic_glink_client *client, void *data, size_t 
  return 0;
 }
 C
-for name in uke_control_live uke_generation uke_battery_property uke_request request uke_callback enable_worker pdr_notify suspend resume; do
+for name in uke_control_live uke_generation uke_battery_property uke_pen_property uke_request request uke_callback enable_worker pdr_notify suspend resume; do
  awk -v name="qcom_battmgr_$name" '$0 ~ "^static (int|void|u32|bool) " name "\\(" {emit=1}
  emit {print} emit && /^}/ {exit}' "$source"
 done
@@ -349,6 +349,42 @@ int main(void) {
  before=sends; assert(qcom_battmgr_uke_request(&ctrl,&limit,sizeof(limit))==-EPIPE && sends==before);
  mutex_unlock(&ctrl.lock);
 #endif
+ struct qcom_battmgr pen; initialize(&pen);
+ struct qcom_battmgr_property_request dock={
+  .hdr={.owner=PMIC_GLINK_OWNER_BATTMGR,.type=PMIC_GLINK_REQ_RESP,.opcode=UKE_INPUT_SUSPEND_GET}
+ };
+ const unsigned int pen_props[]={UKE_PEN_MAC_LOW,UKE_PEN_MAC_HIGH,UKE_PEN_HALL3,UKE_PEN_HALL4};
+ mutex_lock(&pen.lock);
+ before=decodes;
+ for (unsigned int i=0; i<sizeof(pen_props)/sizeof(pen_props[0]); i++) {
+  dock.property=pen_props[i];
+  assert(!qcom_battmgr_uke_request(&pen,&dock,sizeof(dock)));
+  assert(pen.transaction.response.intval.value==123 && decodes==before);
+ }
+ dock.hdr.opcode=UKE_INPUT_SUSPEND_SET;
+ before=sends;
+ assert(qcom_battmgr_uke_request(&pen,&dock,sizeof(dock))==-EACCES && sends==before);
+ dock.hdr.opcode=UKE_INPUT_SUSPEND_GET;
+ dock.value=1;
+ assert(qcom_battmgr_uke_request(&pen,&dock,sizeof(dock))==-EINVAL && sends==before);
+ dock.value=0;
+ mode=5;
+ assert(qcom_battmgr_uke_request(&pen,&dock,sizeof(dock))==-EPROTO);
+ assert(pen.transaction.pen_read_failed && !pen.transaction.desynced);
+ before=sends;
+ assert(qcom_battmgr_uke_request(&pen,&dock,sizeof(dock))==-EPIPE && sends==before);
+ mutex_unlock(&pen.lock);
+ mode=0;
+ assert(!get(&pen,BATTMGR_BAT_PROPERTY_GET));
+
+ struct qcom_battmgr pen_timeout; initialize(&pen_timeout);
+ mutex_lock(&pen_timeout.lock);
+ mode=1;
+ assert(qcom_battmgr_uke_request(&pen_timeout,&dock,sizeof(dock))==-ETIMEDOUT);
+ assert(pen_timeout.transaction.pen_read_failed && !pen_timeout.transaction.desynced);
+ mutex_unlock(&pen_timeout.lock);
+ mode=0;
+ assert(!get(&pen_timeout,BATTMGR_BAT_PROPERTY_GET));
  return 0;
 }
 C

@@ -1,0 +1,176 @@
+Subject: [PATCH] power: supply: expose read-only Uke Focus Pen dock data
+
+Allow the four stock pen identity and Hall GET requests through the
+serialized Uke PMIC GLINK transaction. Keep failed pen reads isolated so
+a late or malformed reply cannot block ordinary battery telemetry.
+
+Expose a privileged snapshot for testing the magnetic pairing path.
+
+---
+diff --git a/drivers/power/supply/qcom_battmgr.c b/drivers/power/supply/qcom_battmgr.c
+--- a/drivers/power/supply/qcom_battmgr.c
++++ b/drivers/power/supply/qcom_battmgr.c
+@@ -100,6 +100,10 @@
+ #define UKE_INPUT_SUSPEND_GET		0x50
+ #define UKE_INPUT_SUSPEND_SET		0x51
+ #define UKE_INPUT_SUSPEND_PROPERTY	53
++#define UKE_PEN_MAC_LOW			0x5f
++#define UKE_PEN_MAC_HIGH		0x60
++#define UKE_PEN_HALL3			0x64
++#define UKE_PEN_HALL4			0x65
+ #define USB_CURR_MAX			4
+ #define USB_INPUT_CURR_LIMIT		5
+ #define USB_TYPE			6
+@@ -339,6 +343,7 @@
+ struct qcom_battmgr_uke_transaction {
+ 	spinlock_t lock;
+ 	bool pending;
++	bool pen_read_failed;
+ 	bool desynced;
+ 	bool suspended;
+ 	bool removing;
+@@ -462,6 +467,12 @@
+ 	return generation;
+ }
+ 
++static bool qcom_battmgr_uke_pen_property(u32 property)
++{
++	return property == UKE_PEN_MAC_LOW || property == UKE_PEN_MAC_HIGH ||
++	       property == UKE_PEN_HALL3 || property == UKE_PEN_HALL4;
++}
++
+ static int qcom_battmgr_uke_request(struct qcom_battmgr *battmgr, void *data, size_t len)
+ {
+ 	struct qcom_battmgr_uke_transaction *tx = &battmgr->transaction;
+@@ -471,6 +482,8 @@
+ 	unsigned long flags, left;
+ 	u32 generation, opcode = le32_to_cpu(hdr->opcode);
+ 	bool preconfigured_enable;
++	bool pen_read = opcode == UKE_INPUT_SUSPEND_GET && len == sizeof(*request) &&
++			qcom_battmgr_uke_pen_property(le32_to_cpu(request->property));
+ 	int ret;
+ 
+ 	lockdep_assert_held(&battmgr->lock);
+@@ -494,7 +507,18 @@
+ 		ret = -EACCES;
+ 		goto out_unlock;
+ 	}
+-	if (opcode == UKE_INPUT_SUSPEND_GET || opcode == UKE_INPUT_SUSPEND_SET) {
++	if (pen_read) {
++		if (tx->pen_read_failed) {
++			ret = -EPIPE;
++			goto out_unlock;
++		}
++		if (le32_to_cpu(hdr->owner) != PMIC_GLINK_OWNER_BATTMGR ||
++		    le32_to_cpu(hdr->type) != PMIC_GLINK_REQ_RESP ||
++		    le32_to_cpu(request->battery) || le32_to_cpu(request->value)) {
++			ret = -EINVAL;
++			goto out_unlock;
++		}
++	} else if (opcode == UKE_INPUT_SUSPEND_GET || opcode == UKE_INPUT_SUSPEND_SET) {
+ 		if (len != sizeof(*request) ||
+ 		    le32_to_cpu(hdr->owner) != PMIC_GLINK_OWNER_BATTMGR ||
+ 		    le32_to_cpu(hdr->type) != PMIC_GLINK_REQ_RESP ||
+@@ -616,8 +640,11 @@
+ out_finish:
+ 	spin_lock_irqsave(&tx->lock, flags);
+ 	if (ret < 0) {
+-		/* A send failure can also leave delivery ambiguous; never replay it. */
+-		tx->desynced = true;
++		/* A late pen reply cannot satisfy unrelated property transactions. */
++		if (pen_read)
++			tx->pen_read_failed = true;
++		else
++			tx->desynced = true;
+ 	} else if (battmgr->error) {
+ 		ret = battmgr->error;
+ 	} else if (!battmgr->service_up || tx->generation != generation) {
+@@ -625,7 +652,13 @@
+ 		      opcode == BATTMGR_CHG_CTRL_LIMIT_EN || opcode == UKE_INPUT_SUSPEND_SET ? -ESTALE : -EAGAIN;
+ 	} else if (!tx->response_len) {
+ 		ret = -EPROTO;
+-		tx->desynced = true;
++		if (pen_read)
++			tx->pen_read_failed = true;
++		else
++			tx->desynced = true;
++	} else if (pen_read) {
++		/* Leave the matched value for the reader holding battmgr->lock. */
++		ret = 0;
+ 	} else {
+ 		/* Receive copied the matching response; only this caller commits it. */
+ 		/* Enable payload semantics are unknown; only its envelope was observed. */
+@@ -2332,7 +2365,11 @@
+ 		    len != sizeof(resp->hdr) + sizeof(resp->intval) ||
+ 		    !le32_to_cpu(resp->intval.result)) {
+ 			battmgr->error = -EPROTO;
+-			tx->desynced = true;
++			if (opcode == UKE_INPUT_SUSPEND_GET &&
++			    qcom_battmgr_uke_pen_property(property))
++				tx->pen_read_failed = true;
++			else
++				tx->desynced = true;
+ 			complete(&battmgr->ack);
+ 			goto out;
+ 		}
+@@ -2559,7 +2596,60 @@
+ static struct device_attribute dev_attr_uke_charge_protocols =
+ 	__ATTR(uke_charge_protocols, 0400, uke_charge_protocols_show, NULL);
+ 
++static int qcom_battmgr_uke_read_pen_property(struct qcom_battmgr *battmgr,
++					     unsigned int property, u32 *value)
++{
++	int ret;
++
++	ret = qcom_battmgr_request_property(battmgr, UKE_INPUT_SUSPEND_GET, property, 0);
++	if (!ret)
++		*value = le32_to_cpu(battmgr->transaction.response.intval.value);
++	return ret;
++}
++
++static ssize_t uke_pen_dock_show(struct device *dev,
++				struct device_attribute *attr, char *buf)
++{
++	struct qcom_battmgr *battmgr = dev_get_drvdata(dev);
++	static const unsigned int props[] = {
++		UKE_PEN_HALL3, UKE_PEN_HALL4, UKE_PEN_MAC_LOW, UKE_PEN_MAC_HIGH,
++		UKE_PEN_HALL3, UKE_PEN_HALL4,
++	};
++	u32 value[ARRAY_SIZE(props)];
++	unsigned int i;
++	int ret;
++
++	if (!capable(CAP_SYS_ADMIN))
++		return -EPERM;
++	if (!mutex_trylock(&battmgr->lock))
++		return -EBUSY;
++	for (i = 0; i < ARRAY_SIZE(props); i++) {
++		ret = qcom_battmgr_uke_read_pen_property(battmgr, props[i], &value[i]);
++		if (ret)
++			break;
++		if (i == 1 && value[0] == 1 && value[1] == 1) {
++			value[2] = value[3] = 0;
++			value[4] = value[0];
++			value[5] = value[1];
++			break;
++		}
++	}
++	mutex_unlock(&battmgr->lock);
++	if (ret)
++		return ret;
++	if (value[0] > 1 || value[1] > 1 || value[3] > 0xffff)
++		return -EPROTO;
++	if (value[0] != value[4] || value[1] != value[5])
++		return -EAGAIN;
++	return sysfs_emit(buf, "%u %u %012llX\n", value[0], value[1],
++			  ((u64)value[3] << 32) | value[2]);
++}
++
++static struct device_attribute dev_attr_uke_pen_dock =
++	__ATTR(uke_pen_dock, 0400, uke_pen_dock_show, NULL);
++
+ static struct attribute *qcom_battmgr_uke_attrs[] = {
++	&dev_attr_uke_pen_dock.attr,
+ 	&dev_attr_uke_charge_protocols.attr,
+ 	&dev_attr_uke_charge_protection_state.attr,
+ 	&dev_attr_uke_charge_wet_guard.attr,

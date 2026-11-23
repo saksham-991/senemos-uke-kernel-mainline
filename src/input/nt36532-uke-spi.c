@@ -12,6 +12,11 @@
 #include <linux/input/touchscreen.h>
 #include <linux/irq.h>
 #include <linux/jiffies.h>
+#include <linux/fs.h>
+#include <linux/kfifo.h>
+#include <linux/miscdevice.h>
+#include <linux/poll.h>
+#include <linux/unaligned.h>
 #include <linux/module.h>
 #include <linux/notifier.h>
 #include <linux/of.h>
@@ -29,6 +34,102 @@
 
 #define NVT_UKE_WIRE_SIZE (NVT_UKE_FRAME_SIZE + 2)
 
+struct nvt_pen_record {
+	u64 time_ns;
+	u8 frame[NVT_UKE_FRAME_SIZE];
+};
+
+static DEFINE_KFIFO(pen_frames, struct nvt_pen_record, 32);
+static DECLARE_WAIT_QUEUE_HEAD(pen_wait);
+static DEFINE_SPINLOCK(pen_lock);
+static DEFINE_MUTEX(pen_binding_lock);
+static DEFINE_MUTEX(pen_read_lock);
+static struct nvt_uke_touch *pen_touch;
+static atomic_t pen_open = ATOMIC_INIT(0);
+
+static void nvt_pen_schedule_locked(struct nvt_uke_touch *t);
+
+static int nvt_pen_open(struct inode *inode, struct file *file)
+{
+	int ret = -ENODEV;
+
+	mutex_lock(&pen_binding_lock);
+	if (!pen_touch)
+		goto out;
+	ret = -EBUSY;
+	if (atomic_cmpxchg(&pen_open, 0, 1))
+		goto out;
+	kfifo_reset_out(&pen_frames);
+	nvt_pen_schedule_locked(pen_touch);
+	ret = nonseekable_open(inode, file);
+out:
+	mutex_unlock(&pen_binding_lock);
+	return ret;
+}
+
+static int nvt_pen_close(struct inode *inode, struct file *file)
+{
+	mutex_lock(&pen_binding_lock);
+	atomic_set(&pen_open, 0);
+	if (pen_touch)
+		nvt_pen_schedule_locked(pen_touch);
+	mutex_unlock(&pen_binding_lock);
+	return 0;
+}
+
+static ssize_t nvt_pen_read(struct file *file, char __user *buf,
+			    size_t size, loff_t *offset)
+{
+	unsigned int copied;
+	int ret;
+
+	if (size < sizeof(struct nvt_pen_record))
+		return -EMSGSIZE;
+	ret = mutex_lock_interruptible(&pen_read_lock);
+	if (ret)
+		return ret;
+	if (file->f_flags & O_NONBLOCK) {
+		if (kfifo_is_empty(&pen_frames) && READ_ONCE(pen_touch)) {
+			ret = -EAGAIN;
+			goto out;
+		}
+	} else {
+		ret = wait_event_interruptible(pen_wait,
+			!kfifo_is_empty(&pen_frames) || !READ_ONCE(pen_touch));
+		if (ret)
+			goto out;
+	}
+	ret = kfifo_to_user(&pen_frames, buf, sizeof(struct nvt_pen_record), &copied);
+	if (!ret)
+		ret = copied;
+out:
+	mutex_unlock(&pen_read_lock);
+	return ret;
+}
+
+static __poll_t nvt_pen_poll(struct file *file, poll_table *table)
+{
+	poll_wait(file, &pen_wait, table);
+	if (!READ_ONCE(pen_touch))
+		return EPOLLHUP;
+	return kfifo_is_empty(&pen_frames) ? 0 : EPOLLIN | EPOLLRDNORM;
+}
+
+static const struct file_operations nvt_pen_fops = {
+	.owner = THIS_MODULE,
+	.open = nvt_pen_open,
+	.release = nvt_pen_close,
+	.read = nvt_pen_read,
+	.poll = nvt_pen_poll,
+};
+
+static struct miscdevice nvt_pen_misc = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "uke-focus-pen-frames",
+	.fops = &nvt_pen_fops,
+	.mode = 0600,
+};
+
 struct nvt_uke_touch {
 	struct spi_device *spi;
 	struct input_dev *wake_input;
@@ -40,6 +141,7 @@ struct nvt_uke_touch {
 	struct nvt_uke_io io;
 	struct work_struct boot_work;
 	struct work_struct charger_work;
+	struct work_struct pen_work;
 	struct delayed_work poll_work;
 	struct nvt_uke_matrix matrix;
 	/* ctrl changes state; workers never acquire it or a panel lock. */
@@ -51,6 +153,7 @@ struct nvt_uke_touch {
 	bool gesture_io, gesture_armed, irq_wake;
 	bool firmware_ready;
 	bool charger_known, charger_online;
+	bool pen_scanning;
 	unsigned int watchdog;
 	u64 input_packets, input_errors;
 	u64 io_errors, recovery_attempts;
@@ -64,6 +167,7 @@ struct nvt_uke_touch {
 	u8 motion_slot;
 	bool motion_valid;
 	u8 *tx, *rx, *frame;
+	struct nvt_pen_record pen_record;
 };
 
 static bool nvt_active(struct nvt_uke_touch *t)
@@ -346,6 +450,43 @@ static void nvt_irq_set(struct nvt_uke_touch *t, bool enabled)
 	mutex_unlock(&t->irq_lock);
 }
 
+static void nvt_pen_schedule_locked(struct nvt_uke_touch *t)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&t->state_lock, flags);
+	if (nvt_active(t))
+		queue_work(system_long_wq, &t->pen_work);
+	spin_unlock_irqrestore(&t->state_lock, flags);
+}
+
+static void nvt_update_pen(struct nvt_uke_touch *t)
+{
+	bool wanted = atomic_read(&pen_open);
+	int ret;
+
+	if (!t->booted || nvt_ready(t) || wanted == t->pen_scanning)
+		return;
+	ret = nvt_uke_pen_scan(&t->io, wanted);
+	if (ret) {
+		if (ret != -ESHUTDOWN)
+			dev_warn_ratelimited(&t->spi->dev, "Pen scan change failed: %d\n", ret);
+		if (wanted)
+			nvt_uke_pen_scan(&t->io, false);
+		return;
+	}
+	t->pen_scanning = wanted;
+}
+
+static void nvt_pen_worker(struct work_struct *work)
+{
+	struct nvt_uke_touch *t = container_of(work, struct nvt_uke_touch, pen_work);
+
+	mutex_lock(&t->io_lock);
+	nvt_update_pen(t);
+	mutex_unlock(&t->io_lock);
+}
+
 static void nvt_quiesce(struct nvt_uke_touch *t)
 {
 	int ret;
@@ -363,6 +504,7 @@ static void nvt_quiesce(struct nvt_uke_touch *t)
 	}
 	cancel_work_sync(&t->boot_work);
 	cancel_work_sync(&t->charger_work);
+	cancel_work_sync(&t->pen_work);
 	mutex_lock(&t->io_lock);
 	nvt_release_contacts(t);
 	t->booted = false;
@@ -455,6 +597,7 @@ static void nvt_boot_worker(struct work_struct *work)
 				   t->idle_reset);
 	if (!ret)
 		ret = nvt_uke_coordinate_mode(&t->io, false);
+	t->pen_scanning = false;
 	t->idle_reset = false;
 	t->watchdog = 0;
 	if (!ret) {
@@ -463,6 +606,7 @@ static void nvt_boot_worker(struct work_struct *work)
 		t->charger_known = false;
 		t->last_irq = t->last_valid = jiffies;
 		nvt_apply_charger(t);
+		nvt_update_pen(t);
 	} else if (ret != -ESHUTDOWN) {
 		nvt_fault(t);
 		dev_err_ratelimited(&t->spi->dev, "THP firmware start failed: %d\n", ret);
@@ -472,6 +616,28 @@ static void nvt_boot_worker(struct work_struct *work)
 		nvt_irq_set(t, true);
 		nvt_schedule_poll(t);
 	}
+}
+
+static bool nvt_send_pen_frame(struct nvt_uke_touch *t)
+{
+	const u8 *header = t->frame + 256;
+
+	if (!t->pen_scanning ||
+	    get_unaligned_le16(header) != 0x61a5 || header[56] != 0x1d ||
+	    get_unaligned_le32(header + 8) != 0x509 ||
+	    get_unaligned_le32(header + 16) != ~0x509U ||
+	    (get_unaligned_le16(header + 4) ^ get_unaligned_le16(header + 12)) != 0xffff)
+		return false;
+
+	if (atomic_read(&pen_open)) {
+		t->pen_record.time_ns = ktime_get_ns();
+		memcpy(t->pen_record.frame, t->frame, NVT_UKE_FRAME_SIZE);
+		if (kfifo_in_spinlocked(&pen_frames, &t->pen_record, 1, &pen_lock))
+			wake_up_interruptible(&pen_wait);
+	}
+	t->last_valid = jiffies;
+	nvt_release_contacts(t);
+	return true;
 }
 
 static void nvt_read_contacts(struct nvt_uke_touch *t)
@@ -517,7 +683,8 @@ static void nvt_read_contacts(struct nvt_uke_touch *t)
 		queue_work(system_long_wq, &t->boot_work);
 		return;
 	}
-	nvt_publish_contacts(t, 0);
+	if (!nvt_send_pen_frame(t))
+		nvt_publish_contacts(t, 0);
 }
 
 static void nvt_poll_worker(struct work_struct *work)
@@ -717,6 +884,7 @@ static int nvt_probe(struct spi_device *spi)
 	spin_lock_init(&t->state_lock);
 	INIT_WORK(&t->boot_work, nvt_boot_worker);
 	INIT_WORK(&t->charger_work, nvt_charger_worker);
+	INIT_WORK(&t->pen_work, nvt_pen_worker);
 	INIT_DELAYED_WORK(&t->poll_work, nvt_poll_worker);
 	if (device_property_read_u32_array(dev, "novatek,column-map", t->matrix.columns, NVT_UKE_COLUMNS) ||
 	    device_property_read_u32_array(dev, "novatek,row-map", t->matrix.rows, NVT_UKE_ROWS))
@@ -790,8 +958,12 @@ static int nvt_probe(struct spi_device *spi)
 		goto follower;
 	t->panel_notifier.notifier_call = nvt_panel_changed;
 	ret = uke_o82_touch_register(t->follower.panel, &t->panel_notifier);
-	if (!ret)
+	if (!ret) {
+		mutex_lock(&pen_binding_lock);
+		WRITE_ONCE(pen_touch, t);
+		mutex_unlock(&pen_binding_lock);
 		return 0;
+	}
 	power_supply_unreg_notifier(&t->supply_notifier);
 	nvt_quiesce(t);
 follower:
@@ -808,6 +980,11 @@ static void nvt_remove(struct spi_device *spi)
 	struct nvt_uke_touch *t = spi_get_drvdata(spi);
 	unsigned long flags;
 
+	mutex_lock(&pen_binding_lock);
+	if (pen_touch == t)
+		WRITE_ONCE(pen_touch, NULL);
+	mutex_unlock(&pen_binding_lock);
+	wake_up_interruptible(&pen_wait);
 	mutex_lock(&t->ctrl);
 	spin_lock_irqsave(&t->state_lock, flags);
 	t->removed = true;
@@ -927,7 +1104,27 @@ static struct spi_driver nvt_driver = {
 	.shutdown = nvt_shutdown,
 	.id_table = nvt_spi_ids,
 };
-module_spi_driver(nvt_driver);
+static int __init nvt_driver_init(void)
+{
+	int ret;
+
+	ret = misc_register(&nvt_pen_misc);
+	if (ret)
+		return ret;
+	ret = spi_register_driver(&nvt_driver);
+	if (ret)
+		misc_deregister(&nvt_pen_misc);
+	return ret;
+}
+
+static void __exit nvt_driver_exit(void)
+{
+	spi_unregister_driver(&nvt_driver);
+	misc_deregister(&nvt_pen_misc);
+}
+
+module_init(nvt_driver_init);
+module_exit(nvt_driver_exit);
 MODULE_FIRMWARE("qcom/uke/touch/csot/normal.bin");
 MODULE_FIRMWARE("qcom/uke/touch/tm/normal.bin");
 MODULE_DESCRIPTION("Uke NT36532 signed raw THP packet transport");
