@@ -3,10 +3,10 @@
 set -Eeuo pipefail
 kernel=$(realpath "${1:?prepared kernel}")
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-overlays=(src/camera/sensors/0001-dt-bindings-media-ov13b10.patch
-    src/camera/sensors/0002-media-i2c-ov13b10-of-match.patch
-    src/camera/sensors/0003-ov08d10-probe-debug-lanes.patch
-    src/camera/sensors/0004-ov08d10-exposure-read-errors.patch)
+overlays=(sensors/0001-dt-bindings-media-ov13b10.patch
+    sensors/0002-media-i2c-ov13b10-of-match.patch
+    sensors/0003-ov08d10-probe-debug-lanes.patch
+    sensors/0004-ov08d10-exposure-read-errors.patch)
 for path in "${overlays[@]}"; do
     git -C "$kernel" apply --check "$here/$path"
     git -C "$kernel" apply "$here/$path"
