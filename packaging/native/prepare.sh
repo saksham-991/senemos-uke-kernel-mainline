@@ -85,6 +85,8 @@ bash "$profile/tests/memlat-lifecycle-contract.sh"
 bash "$profile/src/sensors/prepare-source.sh" "$kernel"
 bash "$profile/tests/ssc-protocol-contract.sh"
 bash "$profile/tests/ssc-native-contract.sh" "$kernel"
+# Camera sensor prerequisite: enable OV08D10 and OV13B10 native modules
+bash "$profile/src/camera/prepare-sensors731.sh" "$kernel"
 CXX=clang++ bash "$profile/tests/hardware-dt.sh"
 bash "$profile/src/performance/prepare-source.sh" "$kernel"
 bash "$profile/src/nfc/prepare-source.sh" "$kernel"
@@ -102,6 +104,7 @@ bash "$profile/src/display/prepare-source.sh" "$kernel"
 # Native Cliffs video candidate: source-level integration only. The boot overlay
 # stays gated behind UKE_VIDEO_OVERLAY until firmware and codec acceptance.
 bash "$profile/src/video/prepare-source.sh" "$kernel"
+bash "$profile/src/camera/prepare-source.sh" "$kernel"
 reservation_baseline=$output/dpu-reservation-before56
 for relative in drivers/gpu/drm/msm/msm_atomic.c drivers/gpu/drm/msm/disp/dpu1/dpu_crtc.c drivers/gpu/drm/msm/disp/dpu1/dpu_encoder.c; do
     install -Dm644 "$kernel/$relative" "$reservation_baseline/$relative"

@@ -1,0 +1,347 @@
+// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/clock/qcom,gcc-cliffs.h>
+#include <dt-bindings/clock/qcom,sm7675-camcc.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/* Native camera sensor graph for Xiaomi Pad 7 (uke, SM7675).
+ * Rear: OV13B10 on CSI0 (CCI0, CSIPHY0, CSID0, IFE0)
+ * Front: OV08D10 on QUP1 SE8 I2C (separate I2C bus, not CCI)
+ *
+ * Firmware and calibration remain private. Physical capture validation required.
+ */
+
+/ {
+    /* Enable CAMCC controller */
+    fragment@500 {
+        target = <&cam_cc>;
+        __overlay__ {
+            status = "okay";
+        };
+    };
+
+    /* Enable CCI0 for rear camera */
+    fragment@501 {
+        target = <&cci0>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&cam_cc CAM_CC_CCI_0_CLK>,
+                     <&cam_cc CAM_CC_CCI_0_CLK_SRC>;
+            clock-names = "cci", "cci_src";
+        };
+    };
+
+    /* Enable CSIPHY0 for rear camera */
+    fragment@502 {
+        target = <&csiphy0>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&cam_cc CAM_CC_CSIPHY0_CLK>;
+            clock-names = "csiphy";
+        };
+    };
+
+    /* CSIPHY0 endpoint for rear camera */
+    fragment@503 {
+        target = <&csiphy0>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            port@0 {
+                csiphy0_ep0: endpoint {
+                    remote-endpoint = <&ov13b10_ep>;
+                    data-lanes = <1 2 3 4>;
+                    link-frequencies = /bits/ 64 <560000000>;
+                };
+            };
+        };
+    };
+
+    /* Enable CSID0 for rear camera */
+    fragment@504 {
+        target = <&csid0>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&cam_cc CAM_CC_CSID_CLK>, <&cam_cc CAM_CC_CPHY_RX_CLK_SRC>;
+            clock-names = "csid", "csiphy_rx";
+        };
+    };
+
+    /* Enable IFE0 for rear camera (OEM: ife0@ac62000) */
+    fragment@505 {
+        target = <&ife0>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&gcc GCC_CAM_AXI_HF_CLK>, <&cam_cc CAM_CC_CPAS_AHB_CLK>,
+                     <&cam_cc CAM_CC_CPAS_FAST_AHB_CLK>, <&cam_cc CAM_CC_CAMNOC_AXI_RT_CLK>,
+                     <&cam_cc CAM_CC_CPAS_IFE_0_CLK>, <&cam_cc CAM_CC_CPAS_IFE0_CLK>,
+                     <&cam_cc CAM_CC_QDSS_DEBUG_CLK>;
+            clock-names = "gcc_axi_hf", "cpas_ahb", "cpas_fast_ahb",
+                          "camnoc_axi", "ife0_fast_ahb", "ife0", "qdss_debug_xo";
+        };
+    };
+
+    /* Rear camera sensor: OV13B10 on CCI0 */
+    fragment@506 {
+        target = <&cci0>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            ov13b10@36 {
+                compatible = "ovti,ov13b10";
+                reg = <0x36>;
+                clocks = <&cam_cc CAM_CC_MCLK0_CLK>;
+                clock-names = "xclk";
+                avdd-supply = <&cam_vdd_ana>;
+                dovdd-supply = <&cam_vdd_io>;
+                dvdd-supply = <&cam_vdd_dig>;
+                reset-gpios = <&tlmm 87 GPIO_ACTIVE_LOW>;
+                port {
+                    ov13b10_ep: endpoint {
+                        remote-endpoint = <&csiphy0_ep0>;
+                        data-lanes = <1 2 3 4>;
+                        link-frequencies = /bits/ 64 <560000000>;
+                    };
+                };
+            };
+        };
+    };
+
+    /* Front camera EEPROM on QUP1 SE8 (already prepared by uke-front-eeprom-dt.h) */
+    fragment@507 {
+        target-path = "/soc/qcom,qupv3_1_geni_se@8c0000/i2c@880000";
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            ov08d10@10 {
+                compatible = "ovti,ov08d10";
+                reg = <0x10>;
+                clocks = <&cam_cc CAM_CC_MCLK1_CLK>;
+                clock-names = "xclk";
+                avdd-supply = <&cam_vdd_ana>;
+                dovdd-supply = <&cam_vdd_io>;
+                dvdd-supply = <&cam_vdd_dig>;
+                reset-gpios = <&tlmm 88 GPIO_ACTIVE_LOW>;
+                port {
+                    ov08d10_ep: endpoint {
+                        remote-endpoint = <&csiphy1_ep0>;
+                        data-lanes = <1 2>;
+                        link-frequencies = /bits/ 64 <360000000>;
+                    };
+                };
+            };
+        };
+    };
+
+    /* Enable CSIPHY1 for front camera */
+    fragment@508 {
+        target = <&csiphy1>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&cam_cc CAM_CC_CSIPHY1_CLK>;
+            clock-names = "csiphy";
+        };
+    };
+
+    /* CSIPHY1 endpoint for front camera */
+    fragment@509 {
+        target = <&csiphy1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            port@0 {
+                csiphy1_ep0: endpoint {
+                    remote-endpoint = <&ov08d10_ep>;
+                    data-lanes = <1 2>;
+                    link-frequencies = /bits/ 64 <360000000>;
+                };
+            };
+        };
+    };
+
+    /* Enable CSID1 for front camera */
+    fragment@510 {
+        target = <&csid1>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&cam_cc CAM_CC_CSID_CLK>, <&cam_cc CAM_CC_CPHY_RX_CLK_SRC>;
+            clock-names = "csid", "csiphy_rx";
+        };
+    };
+
+    /* Enable IFE1 for front camera (OEM: ife1@ac71000) */
+    fragment@511 {
+        target = <&ife1>;
+        __overlay__ {
+            status = "okay";
+            clocks = <&gcc GCC_CAM_AXI_HF_CLK>, <&cam_cc CAM_CC_CPAS_AHB_CLK>,
+                     <&cam_cc CAM_CC_CPAS_FAST_AHB_CLK>, <&cam_cc CAM_CC_CAMNOC_AXI_RT_CLK>,
+                     <&cam_cc CAM_CC_CPAS_IFE_1_CLK>, <&cam_cc CAM_CC_CPAS_IFE1_CLK>,
+                     <&cam_cc CAM_CC_QDSS_DEBUG_CLK>;
+            clock-names = "gcc_axi_hf", "cpas_ahb", "cpas_fast_ahb",
+                          "camnoc_axi", "ife1_fast_ahb", "ife1", "qdss_debug_xo";
+        };
+    };
+
+    /* Camera power supplies - to be provided by board-specific regulators */
+    fragment@512 {
+        target = <&spc>;
+        __overlay__ {
+            cam_vdd_ana: cam_vdd_ana {
+                compatible = "regulator-fixed";
+                regulator-name = "cam_vdd_ana";
+                regulator-min-microvolt = <2800000>;
+                regulator-max-microvolt = <2800000>;
+                regulator-always-on;
+            };
+            cam_vdd_io: cam_vdd_io {
+                compatible = "regulator-fixed";
+                regulator-name = "cam_vdd_io";
+                regulator-min-microvolt = <1800000>;
+                regulator-max-microvolt = <1800000>;
+                regulator-always-on;
+            };
+            cam_vdd_dig: cam_vdd_dig {
+                compatible = "regulator-fixed";
+                regulator-name = "cam_vdd_dig";
+                regulator-min-microvolt = <1200000>;
+                regulator-max-microvolt = <1200000>;
+                regulator-always-on;
+            };
+        };
+    };
+
+    /* Disable OEM camera nodes that conflict with native driver.
+     * Keep IFE0, IFE1, CSID0, CSID1, CSIPHY0, CSIPHY1 enabled (used above).
+     * Disable unused: IFE2, CSID2, CSIPHY2/3/4, CCI1, CCI0 legacy, etc.
+     */
+    fragment@513 {
+        target = <&ipe0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@514 {
+        target = <&ife2>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@515 {
+        target = <&csid1_legacy>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@516 {
+        target = <&csiphy4>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@517 {
+        target = <&cre>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@518 {
+        target = <&jpegenc0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@519 {
+        target = <&csiphy3>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@520 {
+        target = <&rt_cdm3>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@521 {
+        target = <&csid0_legacy>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@522 {
+        target = <&csiphy2>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@523 {
+        target = <&rt_cdm4>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@524 {
+        target = <&bps>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@525 {
+        target = <&icp>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@526 {
+        target = <&rt_cdm0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@527 {
+        target = <&cpas>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@528 {
+        target = <&tpg13>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@529 {
+        target = <&cci0_legacy>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@530 {
+        target = <&rt_cdm1>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@531 {
+        target = <&csiphy1_legacy>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@532 {
+        target = <&csid_lite1>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@533 {
+        target = <&sfe1>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@534 {
+        target = <&crm>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@535 {
+        target = <&ife_lite1>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@536 {
+        target = <&tpg14>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@537 {
+        target = <&csiphy0_legacy>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@538 {
+        target = <&csid_lite0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@539 {
+        target = <&ife_lite0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@540 {
+        target = <&cci1>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@541 {
+        target = <&rt_cdm2>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@542 {
+        target = <&sfe0>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@543 {
+        target = <&tpg15>;
+        __overlay__ { status = "disabled"; };
+    };
+    fragment@544 {
+        target = <&csid2>;
+        __overlay__ { status = "disabled"; };
+    };
+};
