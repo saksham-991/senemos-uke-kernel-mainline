@@ -3,12 +3,20 @@
 #include <dt-bindings/phy/phy-qcom-qmp.h>
 
 &dispcc {
+	/* Clocks for DISPCC: first 8 are shared (TCXO, iface, sleep, DSI PHYs),
+	 * next 2 are DP0 link/VCO from QMP PHY for SST (Single Stream Transport).
+	 * dp1-dp3 clocks (indices 10-15) are for MST and left unconnected (<0>)
+	 * since MST is not yet enabled on Uke. SST only uses dp0_link/dp0_vco. */
 	clocks = <&rpmhcc 0>, <&rpmhcc 1>, <&gcc GCC_DISP_AHB_CLK>, <&sleep_clk>,
 		 <&uke_phy0 DSI_BYTE_PLL_CLK>, <&uke_phy0 DSI_PIXEL_PLL_CLK>,
 		 <&uke_phy1 DSI_BYTE_PLL_CLK>, <&uke_phy1 DSI_PIXEL_PLL_CLK>,
 		 <&usb_qmp_dp_phy QMP_USB43DP_DP_LINK_CLK>,
 		 <&usb_qmp_dp_phy QMP_USB43DP_DP_VCO_DIV_CLK>,
 		 <0>, <0>, <0>, <0>, <0>, <0>;
+	clock-names = "bi_tcxo", "bi_tcxo_ao", "iface", "sleep_clk",
+		      "dsi0_byte", "dsi0_pixel", "dsi1_byte", "dsi1_pixel",
+		      "dp0_link", "dp0_vco", "dp1_link", "dp1_vco",
+		      "dp2_link", "dp2_vco", "dp3_link", "dp3_vco";
 };
 
 &uke_mdss {
