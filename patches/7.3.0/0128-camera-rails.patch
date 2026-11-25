@@ -7,7 +7,7 @@ ldob20 (cam_vio 1.8V, shared DOVDD), ldoe6 (rear cam_vdig 1.2V),
 and ldoc3 (front cam_vdig 1.2V). Extend the allow-list accordingly.
 
 diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qcom-rpmh-regulator-uke.c
-index 1234567..abcdefg 100644
+index abcdef0..1234567 100644
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
 @@ -2014,7 +2014,10 @@
