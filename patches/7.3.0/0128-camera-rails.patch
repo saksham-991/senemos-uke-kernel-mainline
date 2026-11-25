@@ -19,5 +19,4 @@ index 1234567..abcdefg 100644
 +    strcmp(aggr_vreg->resource_name, "ldoe6") &&
 +    strcmp(aggr_vreg->resource_name, "ldoc3")
     return -ENODEV;
-
     aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
