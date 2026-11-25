@@ -125,3 +125,5 @@
 0125-uke-ucsi-contract-cache.patch
 0126-uke-protocol-observation.patch
 0127-qcom-battmgr-report-energy-in-mah.patch
+regulator/0004-camera-rails.patch
+iommu/0002-camera-smmu.patch
