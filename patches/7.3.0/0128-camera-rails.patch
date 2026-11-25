@@ -8,16 +8,18 @@ and ldoc3 (front cam_vdig 1.2V). Extend the allow-list accordingly.
 
 Signed-off-by: Uke Linux maintainers <75160848+MCC45TR@users.noreply.github.com>
 
+diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qcom-rpmh-regulator-uke.c
+index 1234567..abcdefg 100644
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
 @@ -2014,7 +2014,10 @@
      strcmp(aggr_vreg->resource_name, "ldob12") &&
      strcmp(aggr_vreg->resource_name, "ldod3") &&
--    strcmp(aggr_vreg->resource_name, "bobb1"))
+-    strcmp(aggr_vreg->resource_name, "bobb1")
 +    strcmp(aggr_vreg->resource_name, "bobb1") &&
 +    strcmp(aggr_vreg->resource_name, "ldob20") &&
 +    strcmp(aggr_vreg->resource_name, "ldoe6") &&
-+    strcmp(aggr_vreg->resource_name, "ldoc3"))
++    strcmp(aggr_vreg->resource_name, "ldoc3")
     return -ENODEV;
 
     aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
