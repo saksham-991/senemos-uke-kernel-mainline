@@ -10,11 +10,13 @@ diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qco
 index abcdef0..1234567 100644
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -2014,4 +2014,7 @@
+@@ -2014,10 +2014,13 @@
+     strcmp(aggr_vreg->resource_name, "ldob5") &&
      strcmp(aggr_vreg->resource_name, "ldob12") &&
      strcmp(aggr_vreg->resource_name, "ldod3") &&
 +    strcmp(aggr_vreg->resource_name, "ldob20") &&
 +    strcmp(aggr_vreg->resource_name, "ldoe6") &&
 +    strcmp(aggr_vreg->resource_name, "ldoc3")
     return -ENODEV;
+ 
     aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
