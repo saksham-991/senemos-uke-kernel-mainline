@@ -516,14 +516,6 @@
     {
       "path": "patches/7.3.0/0127-qcom-battmgr-report-energy-in-mah.patch",
       "sha256": "4723015eb1b2a280511c7cb11f9cffa0a697d0a9ba21c4a341684107dfa590ad"
-    },
-    {
-      "path": "patches/7.3.0/0128-camera-rails.patch",
-      "sha256": "187f3ebc39d28f7d1132259a7c84386347f3d15cd2e7fedacdfcde3cc03b95a8"
-    },
-    {
-      "path": "patches/7.3.0/0129-camera-smmu.patch",
-      "sha256": "71ef8397acdbb818c381207a62e71a6c4ac362bf958f96aededbd80eb0804028"
     }
   ],
   "dtb": "qcom/sm7675-xiaomi-uke.dtb",
