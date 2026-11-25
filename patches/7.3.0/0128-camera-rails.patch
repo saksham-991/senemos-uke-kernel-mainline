@@ -5,9 +5,8 @@
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
 @@ -2014,7 +2014,10 @@
-     strcmp(aggr_vreg->resource_name, "ldob8") &&
+     strcmp(aggr_vreg->resource_name, "ldob12") &&
      strcmp(aggr_vreg->resource_name, "ldod3") &&
-     strcmp(aggr_vreg->resource_name, "ldoe7") &&
 -    strcmp(aggr_vreg->resource_name, "bobb1"))
 +    strcmp(aggr_vreg->resource_name, "bobb1") &&
 +    strcmp(aggr_vreg->resource_name, "ldob20") &&
