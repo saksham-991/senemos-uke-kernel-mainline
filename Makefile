@@ -4,7 +4,7 @@ SHELL := /bin/bash
 .PHONY: validate srpm test-touch-protocol test-touch-transport test-touch-dt
 version := 7.3.1
 patch_series := 7.3.0
-patch_count := 127
+patch_count := 129
 outdir ?= $(CURDIR)/build/srpm
 .PHONY: refresh-pins check-pins require-unstable-series
 refresh-pins:
